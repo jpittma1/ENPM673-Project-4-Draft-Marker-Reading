@@ -164,7 +164,7 @@ while(vid.isOpened()):
     else: #read video is not success; exit loop
         vid.release()
             
-    print("Count is: ", count)  #657
+    # print("Count is: ", count)  #657
 
 vid.release()
 output_hough.release()
