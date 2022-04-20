@@ -29,9 +29,10 @@ import timeit
 
 '''Read in the video'''
 #---Input Video Parameters---###
-thresHold=180
+threshold=180
 start=1 #start video on frame 1
 vid=cv2.VideoCapture('Vessel Draft Mark-(480p).mp4')
+
 
 vid.set(1,start)
 count = start
@@ -39,22 +40,22 @@ count = start
 if (vid.isOpened() == False):
     print('Please check the file name again and file location!')
     
-####----Setup For Optical Flow-------#########
-cap = cv2.VideoCapture(0)
-frame_previous = cap.read()[1]
-gray_previous = cv2.cvtColor(frame_previous, cv2.COLOR_BGR2GRAY)
-hsv = np.zeros_like(frame_previous)
-hsv[:, :, 1] = 255
-param = {
-    'pyr_scale': 0.5,
-    'levels': 3,
-    'winsize': 15,
-    'iterations': 3,
-    'poly_n': 5,
-    'poly_sigma': 1.1,
-    'flags': cv2.OPTFLOW_LK_GET_MIN_EIGENVALS
-}
-############################################
+# ####----Setup For Optical Flow-------#########
+# cap = cv2.VideoCapture(0)
+# frame_previous = cap.read()[1]
+# gray_previous = cv2.cvtColor(frame_previous, cv2.COLOR_BGR2GRAY)
+# hsv = np.zeros_like(frame_previous)
+# hsv[:, :, 1] = 255
+# param = {
+#     'pyr_scale': 0.5,
+#     'levels': 3,
+#     'winsize': 15,
+#     'iterations': 3,
+#     'poly_n': 5,
+#     'poly_sigma': 1.1,
+#     'flags': cv2.OPTFLOW_LK_GET_MIN_EIGENVALS
+# }
+# ############################################
 
 ###############----Output Video Parameters-----##############
 make_video=True    #Toggle this to make an output video
@@ -65,14 +66,18 @@ if make_video == True:
     fps = vid.get(cv2.CAP_PROP_FPS)
     # print("frames_per_second is: ", fps)
     fps_out=fps
-    videoname=('proj4_output')
-    output = cv2.VideoWriter(str(videoname)+".avi", fourcc, fps_out, (720, 480))
+    output_hough = cv2.VideoWriter("proj4_houghTransform_output.avi", fourcc, fps_out, (640, 480))
+    output_contour=cv2.VideoWriter("proj4_Findcontours_output.avi", fourcc, fps_out, (640, 480))
     print("Making a video...this will take some time...")
 ###########################################################
 
 while(vid.isOpened()):
     count+=1
     success,image = vid.read()
+    
+    # height, width = image.shape[:2]
+    # print("Height: ", height)
+    # print("width: ", width)
     
     if success:
         '''Pre-processing'''
@@ -94,24 +99,54 @@ while(vid.isOpened()):
         if count == 8:
             cv2.imwrite('proj4_cannyCorners.jpg', edges)
             
-        '''Hough Transform to Find lowest corner point'''
+        '''Draw over the edges using blur and findContours'''
+        imgray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+        imgray= cv2.medianBlur(imgray,5)
+        ret, thresh = cv2.threshold(imgray, threshold, 255, cv2.THRESH_BINARY)
+
+        contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_NONE)
+        # print("(frame) contours found are ", contours)
+        
+        
+        img_plus_contours=image.copy()
+        cv2.drawContours(img_plus_contours, contours,-1,(0,255,0), 4) #Green
+            
+        '''Draw over the edges using blur and Hough Transform'''
         img=image.copy()
-        minLineLength = 5
-        maxLineGap = 100
-        lines = cv2.HoughLinesP(edges,1,np.pi/180,100,minLineLength,maxLineGap)
+        # minLineLength = 1
+        # maxLineGap = 5
+        # lines = cv2.HoughLinesP(edges,1,np.pi/180,100,minLineLength,maxLineGap)
+        
+        lines = cv2.HoughLines(edges,1,np.pi/180,10)
         # print("lines ", lines)
         if lines is not None:
-            for x1,y1,x2,y2 in lines[0]:
-                cv2.line(img,(x1,y1),(x2,y2),(0,255,0),2)
+            # print("lines is not None")
+            # for x1,y1,x2,y2 in lines[0]: #for HoughLinesP
+            #     cv2.line(img,(x1,y1),(x2,y2),(0,255,0),3)
+            
+            for rho,theta in lines[0]:
+                a = np.cos(theta)
+                b = np.sin(theta)
+                x0 = a*rho
+                y0 = b*rho
+                x1 = int(x0 + 1000*(-b))
+                y1 = int(y0 + 1000*(a))
+                x2 = int(x0 - 1000*(-b))
+                y2 = int(y0 - 1000*(a))
+                
+                # print("x1, y1, x2, y2", x1, " ", y1, " ", x2, " ", y2)
+                if y2>300:
+                    cv2.line(img,(x1,y1),(x2,y2),(0,0,255),2)
 
         if count == 8:
             cv2.imwrite('proj4_houghlines.jpg',img)
+            cv2.imwrite('proj4_contours.jpg',img_plus_contours)
         
         
         '''Hough Transform Detection'''
         
         '''Optical Flow?'''
-        flow = cv2.calcOpticalFlowFarneback(gray_previous, gray, None, **param)
+        # flow = cv2.calcOpticalFlowFarneback(gray_previous, gray, None, **param)
 
         '''Detect/determine Lowest Numbers/Drafts; Place box around the number'''
 
@@ -123,10 +158,16 @@ while(vid.isOpened()):
         
         ###----Save frame to create Output Video----####
         if make_video == True:
-            output.write(img)
-    print("Count is: ", count)  #
+            output_hough.write(img)
+            output_contour.write(img_plus_contours)
+    
+    else: #read video is not success; exit loop
+        vid.release()
+            
+    print("Count is: ", count)  #657
 
 vid.release()
-output.release()
+output_hough.release()
+output_contour.release()
 cv2.destroyAllWindows()
 plt.close('all')
