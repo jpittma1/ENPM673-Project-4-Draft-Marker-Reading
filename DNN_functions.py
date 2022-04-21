@@ -32,7 +32,7 @@ def fourPointsTransform(frame, vertices):
 
 def decodeText(scores):
     text = ""
-    alphabet = "0123456789abcdefghijklmnopqrstuvwxyz"
+    alphabet = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUV"
     for i in range(scores.shape[0]):
         c = np.argmax(scores[i][0])
         if c != 0:

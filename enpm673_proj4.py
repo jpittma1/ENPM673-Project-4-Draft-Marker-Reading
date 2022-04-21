@@ -96,7 +96,7 @@ outNames.append("feature_fusion/concat_3")
 ########################################################
 
 ##---For Tesseract---###
-min_conf=50
+# min_conf=50
 
 '''Read in the video'''
 #---Input Video Parameters---###
@@ -139,7 +139,7 @@ if make_video == True:
     output_hough = cv2.VideoWriter("proj4_houghTransform_output.avi", fourcc, fps_out, (640, 480))
     output_contour = cv2.VideoWriter("proj4_Findcontours_output.avi", fourcc, fps_out, (640, 480))
     output_dnn = cv2.VideoWriter("proj4_DNN_output.avi", fourcc, fps_out, (640, 480))
-    output_tesseract = cv2.VideoWriter("proj4_tesseract_output.avi", fourcc, fps_out, (640, 480))
+    # output_tesseract = cv2.VideoWriter("proj4_tesseract_output.avi", fourcc, fps_out, (640, 480))
     print("Making video(s)...this will take some time...")
 ###########################################################
 
@@ -267,45 +267,47 @@ while(vid.isOpened()):
         
         if count == 8:
             cv2.imwrite('proj4_DNN_result.jpg',frame)
-            
-        '''Using Tesseract CNN and OCR'''
-        # load the input image, convert it from BGR to RGB channel ordering,
-        # and use Tesseract to localize each area of text in the input image
-        # image = cv2.imread(args["image"])
-        img_tess=image.copy()
-        rgb = cv2.cvtColor(img_tess, cv2.COLOR_BGR2RGB)
-        results = pytesseract.image_to_data(rgb, output_type=Output.DICT)
         
-        # loop over each of the individual text localizations
-        for i in range(0, len(results["text"])):
-            # extract the bounding box coordinates of the text region from
-            # the current result
-            x = results["left"][i]
-            y = results["top"][i]
-            w = results["width"][i]
-            h = results["height"][i]
-            # extract the OCR text itself along with the confidence of the
-            # text localization
-            text = results["text"][i]
-            conf = int(results["conf"][i])
+        #####################################################################    
+        # '''Using Tesseract CNN and OCR'''
+        # # load the input image, convert it from BGR to RGB channel ordering,
+        # # and use Tesseract to localize each area of text in the input image
+        # # image = cv2.imread(args["image"])
+        # img_tess=image.copy()
+        # rgb = cv2.cvtColor(img_tess, cv2.COLOR_BGR2RGB)
+        # results = pytesseract.image_to_data(rgb, output_type=Output.DICT)
+        
+        # # loop over each of the individual text localizations
+        # for i in range(0, len(results["text"])):
+        #     # extract the bounding box coordinates of the text region from
+        #     # the current result
+        #     x = results["left"][i]
+        #     y = results["top"][i]
+        #     w = results["width"][i]
+        #     h = results["height"][i]
+        #     # extract the OCR text itself along with the confidence of the
+        #     # text localization
+        #     text = results["text"][i]
+        #     conf = int(results["conf"][i])
 
-        #filter out weak confidence text localizations
-        if conf > min_conf:
-            # display the confidence and text to our terminal
-            print("Confidence: {}".format(conf))
-            print("Text: {}".format(text))
-            print("")
-            # strip out non-ASCII text so we can draw the text on the image
-            # using OpenCV, then draw a bounding box around the text along
-            # with the text itself
-            text = "".join([c if ord(c) < 128 else "" for c in text]).strip()
-            cv2.rectangle(img_tess, (x, y), (x + w, y + h), (0, 255, 0), 2)
-            cv2.putText(img_tess, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
-                1.2, (0, 0, 255), 3)
+        # #filter out weak confidence text localizations
+        # if conf > min_conf:
+        #     # display the confidence and text to our terminal
+        #     # print("Confidence: {}".format(conf))
+        #     # print("Text: {}".format(text))
+        #     # print("")
+        #     # strip out non-ASCII text so we can draw the text on the image
+        #     # using OpenCV, then draw a bounding box around the text along
+        #     # with the text itself
+        #     text = "".join([c if ord(c) < 128 else "" for c in text]).strip()
+        #     cv2.rectangle(img_tess, (x, y), (x + w, y + h), (0, 255, 0), 2)
+        #     cv2.putText(img_tess, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
+        #         1.2, (0, 0, 255), 3)
+        ########################################################################
 
         if count == 8:
             cv2.imwrite('proj4_DNN_result.jpg',frame)
-            cv2.imwrite('proj4_DNN_tesseract_result.jpg',img_tess)
+            # cv2.imwrite('proj4_DNN_tesseract_result.jpg',img_tess)
             
 
         ###----Save frame to create Output Videos----####
@@ -313,7 +315,7 @@ while(vid.isOpened()):
             output_hough.write(img)
             output_contour.write(img_plus_contours)
             output_dnn.write(frame)
-            output_tesseract.write(img_tess)
+            # output_tesseract.write(img_tess)
     
     else: #read video is not success; exit loop
         vid.release()
