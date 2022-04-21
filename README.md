@@ -14,4 +14,6 @@ Yash Kulkarni (UID: 117386967); ykulkarn@umd.edu
 1) "Vessel Draft Mark-(480p).mp4"
 #********************************************
 
-#Function modules used: numpy, cv2, scipy, matplotlib.pyplot, sys, math, timeit
+#Function modules used: numpy, cv2, scipy, matplotlib.pyplot, sys, math, timeit, torch, models.crnn, tensorflow
+torch: sudo pip3 install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/cpu
+tensorflow: sudo pip3 install tensorflow

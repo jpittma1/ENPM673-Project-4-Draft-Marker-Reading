@@ -12,20 +12,88 @@
 
 import numpy as np
 import cv2
-import scipy
-from scipy import fft, ifft
-from numpy import histogram_bin_edges, linalg as LA
-import matplotlib.pyplot as plt
-import sys
-import math
-import os
-from os.path import isfile, join
-import timeit
+# import scipy
+# from scipy import fft, ifft
+# from numpy import histogram_bin_edges, linalg as LA
+# import matplotlib.pyplot as plt
+# import sys
+# import math
+# import os
+# from os.path import isfile, join
+# import timeit
+# import argparse
+import torch
+# import models.crnn
+# from models.crnn import CRNN
+from crnn import *
+from DNN_functions import *
+
 
 #********************************************
 # Requires the following in same folder to run:
 #1) "Vessel Draft Mark-(480p).mp4"
 #********************************************
+
+###TODO: Cut???
+# ############ Add argument parser for command line arguments ############
+# parser = argparse.ArgumentParser(
+#     description="Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of "
+#                 "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)"
+#                 "The OCR model can be obtained from converting the pretrained CRNN model to .onnx format from the github repository https://github.com/meijieru/crnn.pytorch"
+#                 "Or you can download trained OCR model directly from https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing")
+# parser.add_argument('--input',
+#                     help='Path to input image or video file. Skip this argument to capture frames from a camera.')
+# parser.add_argument('--model', '-m',default="CRNN", required=False,
+# # parser.add_argument('--model', '-m', default="CRNN(32, 1, 37, 256)",required=True,
+#                     help='Path to a binary .pb file contains trained detector network.')
+# parser.add_argument('--ocr', default="crnn.onnx",
+#                     help="Path to a binary .pb or .onnx file contains trained recognition network", )
+# parser.add_argument('--width', type=int, default=320,
+#                     help='Preprocess input image by resizing to a specific width. It should be multiple by 32.')
+# parser.add_argument('--height', type=int, default=320,
+#                     help='Preprocess input image by resizing to a specific height. It should be multiple by 32.')
+# parser.add_argument('--thr', type=float, default=0.5,
+#                     help='Confidence threshold.')
+# parser.add_argument('--nms', type=float, default=0.4,
+#                     help='Non-maximum suppression threshold.')
+# args = parser.parse_args()
+
+# model = crnn.CRNN(32, 1, 37, 256)
+# model_path = './data/crnn.pth'
+# model = CRNN(32, 1, 37, 256)
+# # args.model = CRNN(32, 1, 37, 256)
+# model.load_state_dict(torch.load('crnn.pth'))
+# dummy_input = torch.randn(1, 1, 32, 100)
+# torch.onnx.export(model, dummy_input, "crnn.onnx", verbose=True)
+
+###---Arguments for DNN/CNN---###
+# Read and store arguments
+# confThreshold = args.thr
+# nmsThreshold = args.nms
+# modelDetector = args.model
+# modelDetector = CRNN(32, 1, 37, 256)
+# modelRecognition = args.ocr
+
+confThreshold=0.5
+nmsThreshold=0.4
+inpWidth = 320
+inpHeight = 320
+modelDetector = "east.pb"
+modelRecognition = "crnn.onnx"
+
+
+# Load network
+print("[INFO] loading CRNN text detector model...")
+# net = cv2.dnn.readNet(args["east"])
+detector = cv2.dnn.readNet(modelDetector)
+recognizer = cv2.dnn.readNet(modelRecognition)
+
+# Create a new named window
+kWinName = "EAST: An Efficient and Accurate Scene Text Detector"
+cv2.namedWindow(kWinName, cv2.WINDOW_NORMAL)
+outNames = []
+outNames.append("feature_fusion/Conv_7/Sigmoid")
+outNames.append("feature_fusion/concat_3")
 
 '''Read in the video'''
 #---Input Video Parameters---###
@@ -39,7 +107,8 @@ count = start
 
 if (vid.isOpened() == False):
     print('Please check the file name again and file location!')
-    
+
+##TODO: Optical Flow??###
 # ####----Setup For Optical Flow-------#########
 # cap = cv2.VideoCapture(0)
 # frame_previous = cap.read()[1]
@@ -68,7 +137,8 @@ if make_video == True:
     fps_out=fps
     output_hough = cv2.VideoWriter("proj4_houghTransform_output.avi", fourcc, fps_out, (640, 480))
     output_contour=cv2.VideoWriter("proj4_Findcontours_output.avi", fourcc, fps_out, (640, 480))
-    print("Making a video...this will take some time...")
+    output_dnn=cv2.VideoWriter("proj4_DNN_output.avi", fourcc, fps_out, (640, 480))
+    print("Making video(s)...this will take some time...")
 ###########################################################
 
 while(vid.isOpened()):
@@ -78,6 +148,12 @@ while(vid.isOpened()):
     # height, width = image.shape[:2]
     # print("Height: ", height)
     # print("width: ", width)
+    
+     # Get frame height and width
+    height_ = image.shape[0]
+    width_ = image.shape[1]
+    rW = width_ / float(inpWidth)
+    rH = height_ / float(inpHeight)
     
     if success:
         '''Pre-processing'''
@@ -91,6 +167,7 @@ while(vid.isOpened()):
         # dst = np.uint8(dst)
         
         if count == 8:
+            cv2.imwrite('proj4_testImage.jpg', image)
             cv2.imwrite('proj4_harrisCorners.jpg', dst)
         
         '''Canny operator??'''
@@ -145,29 +222,79 @@ while(vid.isOpened()):
         
         '''Hough Transform Detection'''
         
-        '''Optical Flow?'''
+        ##TODO: Optical Flow??###
+        '''Optical Flow???'''
         # flow = cv2.calcOpticalFlowFarneback(gray_previous, gray, None, **param)
 
-        '''Detect/determine Lowest Numbers/Drafts; Place box around the number'''
+        '''Translate numbers using CNN/DNN CRNN Text recognition model'''
+        # Create a 4D blob from frame.
+        frame=image.copy()
+        blob = cv2.dnn.blobFromImage(frame, 1.0, (inpWidth, inpHeight), (123.68, 116.78, 103.94), swapRB=True, crop=False)
 
-
-        '''Translate numbers using CNN?'''
-
-
-        '''Print text on screen of what draft number is'''
+        # Run the detection model
+        detector.setInput(blob)
+        outs = detector.forward(outNames)
         
-        ###----Save frame to create Output Video----####
+        # Get scores and geometry
+        scores = outs[0]
+        geometry = outs[1]
+        [boxes, confidences] = decodeBoundingBoxes(scores, geometry, confThreshold)
+
+        # Apply NMS
+        indices = cv2.dnn.NMSBoxesRotated(boxes, confidences, confThreshold, nmsThreshold)
+        for i in indices:
+            # get 4 corners of the rotated rect
+            vertices = cv2.boxPoints(boxes[i])
+            # scale the bounding box coordinates based on the respective ratios
+            for j in range(4):
+                vertices[j][0] *= rW
+                vertices[j][1] *= rH
+
+            # get cropped image using perspective transform
+            if modelRecognition:
+                cropped = fourPointsTransform(frame, vertices)
+                cropped = cv2.cvtColor(cropped, cv.COLOR_BGR2GRAY)
+
+                # Create a 4D blob from cropped image
+                blob = cv2.dnn.blobFromImage(cropped, size=(100, 32), mean=127.5, scalefactor=1 / 127.5)
+                recognizer.setInput(blob)
+
+                # Run the recognition model
+                result = recognizer.forward()
+
+                '''Print text on screen of what draft number is'''
+                # decode the result into text
+                wordRecognized = decodeText(result)
+                cv2.putText(frame, wordRecognized, (int(vertices[1][0]), int(vertices[1][1])), cv.FONT_HERSHEY_SIMPLEX,
+                           0.5, (255, 0, 0))
+
+            '''Place box around the number'''
+            for j in range(4):
+                p1 = (int(vertices[j][0]), int(vertices[j][1]))
+                p2 = (int(vertices[(j + 1) % 4][0]), int(vertices[(j + 1) % 4][1]))
+                cv2.line(frame, p1, p2, (0, 255, 0), 1)
+                
+        cv2.imshow(kWinName, frame)
+
+        if count == 8:
+            cv2.imwrite('proj4_DNN_result.jpg',frame)
+        
+        ###----Save frame to create Output Videos----####
         if make_video == True:
             output_hough.write(img)
             output_contour.write(img_plus_contours)
+            output_dnn.write(frame)
     
     else: #read video is not success; exit loop
         vid.release()
             
     # print("Count is: ", count)  #657
+    
+
 
 vid.release()
 output_hough.release()
 output_contour.release()
+output_dnn.release()
 cv2.destroyAllWindows()
 plt.close('all')
