@@ -12,6 +12,9 @@ Yash Kulkarni (UID: 117386967); ykulkarn@umd.edu
 #********************************************
 # Requires the following in same folder to run:
 1) "Vessel Draft Mark-(480p).mp4"
+2) "DNN_functions.py"
+3) "crnn.onnx"
+4) "east.pb"
 #********************************************
 
 #Function modules used: numpy, cv2, scipy, matplotlib.pyplot, sys, math, timeit, torch, tensorflow, tesseract, pytesseract, imutils

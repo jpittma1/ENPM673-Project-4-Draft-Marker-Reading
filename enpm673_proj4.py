@@ -34,6 +34,9 @@ from DNN_functions import *
 #********************************************
 # Requires the following in same folder to run:
 #1) "Vessel Draft Mark-(480p).mp4"
+#2) DNN_functions.py
+#3) crnn.onnx
+#4) east.pb
 #********************************************
 
 ###TODO: Cut???
@@ -62,7 +65,7 @@ from DNN_functions import *
 ##############################################################
 
 ####-------EAST and CRNN-------------#########################
-# model = crnn.CRNN(32, 1, 37, 256)
+# model = crnn.CRNN(32, 1, 37, 256) #---Uses crnn.py---
 # model_path = './data/crnn.pth'
 # model = CRNN(32, 1, 37, 256)
 # # args.model = CRNN(32, 1, 37, 256)
@@ -97,6 +100,7 @@ outNames.append("feature_fusion/concat_3")
 
 ##---For Tesseract---###
 # min_conf=50
+########################
 
 '''Read in the video'''
 #---Input Video Parameters---###
