@@ -25,6 +25,8 @@ import cv2
 import torch
 # import models.crnn
 # from models.crnn import CRNN
+from pytesseract import Output
+import pytesseract
 from crnn import *
 from DNN_functions import *
 
@@ -57,7 +59,9 @@ from DNN_functions import *
 # parser.add_argument('--nms', type=float, default=0.4,
 #                     help='Non-maximum suppression threshold.')
 # args = parser.parse_args()
+##############################################################
 
+####-------EAST and CRNN-------------#########################
 # model = crnn.CRNN(32, 1, 37, 256)
 # model_path = './data/crnn.pth'
 # model = CRNN(32, 1, 37, 256)
@@ -76,32 +80,29 @@ from DNN_functions import *
 
 confThreshold=0.5
 nmsThreshold=0.4
-inpWidth = 320
-inpHeight = 320
+inpWidth = 320  #multiple of 32
+inpHeight = 320 #multiple of 32
 modelDetector = "east.pb"
 modelRecognition = "crnn.onnx"
-
 
 # Load network
 print("[INFO] loading CRNN text detector model...")
 # net = cv2.dnn.readNet(args["east"])
 detector = cv2.dnn.readNet(modelDetector)
 recognizer = cv2.dnn.readNet(modelRecognition)
-
-# Create a new named window
-kWinName = "EAST: An Efficient and Accurate Scene Text Detector"
-cv2.namedWindow(kWinName, cv2.WINDOW_NORMAL)
 outNames = []
 outNames.append("feature_fusion/Conv_7/Sigmoid")
 outNames.append("feature_fusion/concat_3")
+########################################################
+
+##---For Tesseract---###
+min_conf=50
 
 '''Read in the video'''
 #---Input Video Parameters---###
 threshold=180
 start=1 #start video on frame 1
 vid=cv2.VideoCapture('Vessel Draft Mark-(480p).mp4')
-
-
 vid.set(1,start)
 count = start
 
@@ -136,8 +137,9 @@ if make_video == True:
     # print("frames_per_second is: ", fps)
     fps_out=fps
     output_hough = cv2.VideoWriter("proj4_houghTransform_output.avi", fourcc, fps_out, (640, 480))
-    output_contour=cv2.VideoWriter("proj4_Findcontours_output.avi", fourcc, fps_out, (640, 480))
-    output_dnn=cv2.VideoWriter("proj4_DNN_output.avi", fourcc, fps_out, (640, 480))
+    output_contour = cv2.VideoWriter("proj4_Findcontours_output.avi", fourcc, fps_out, (640, 480))
+    output_dnn = cv2.VideoWriter("proj4_DNN_output.avi", fourcc, fps_out, (640, 480))
+    output_tesseract = cv2.VideoWriter("proj4_tesseract_output.avi", fourcc, fps_out, (640, 480))
     print("Making video(s)...this will take some time...")
 ###########################################################
 
@@ -145,18 +147,13 @@ while(vid.isOpened()):
     count+=1
     success,image = vid.read()
     
-    # height, width = image.shape[:2]
-    # print("Height: ", height)
-    # print("width: ", width)
-    
-     # Get frame height and width
-    height_ = image.shape[0]
-    width_ = image.shape[1]
-    rW = width_ / float(inpWidth)
-    rH = height_ / float(inpHeight)
-    
     if success:
         '''Pre-processing'''
+        # Get frame height and width
+        height_ = image.shape[0]
+        width_ = image.shape[1]
+        rW = width_ / float(inpWidth)   #multiple of 32
+        rH = height_ / float(inpHeight)
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         '''Harris corner detection'''
@@ -190,16 +187,10 @@ while(vid.isOpened()):
             
         '''Draw over the edges using blur and Hough Transform'''
         img=image.copy()
-        # minLineLength = 1
-        # maxLineGap = 5
-        # lines = cv2.HoughLinesP(edges,1,np.pi/180,100,minLineLength,maxLineGap)
         
         lines = cv2.HoughLines(edges,1,np.pi/180,10)
         # print("lines ", lines)
         if lines is not None:
-            # print("lines is not None")
-            # for x1,y1,x2,y2 in lines[0]: #for HoughLinesP
-            #     cv2.line(img,(x1,y1),(x2,y2),(0,255,0),3)
             
             for rho,theta in lines[0]:
                 a = np.cos(theta)
@@ -273,17 +264,56 @@ while(vid.isOpened()):
                 p1 = (int(vertices[j][0]), int(vertices[j][1]))
                 p2 = (int(vertices[(j + 1) % 4][0]), int(vertices[(j + 1) % 4][1]))
                 cv2.line(frame, p1, p2, (0, 255, 0), 1)
-                
-        cv2.imshow(kWinName, frame)
+        
+        if count == 8:
+            cv2.imwrite('proj4_DNN_result.jpg',frame)
+            
+        '''Using Tesseract CNN and OCR'''
+        # load the input image, convert it from BGR to RGB channel ordering,
+        # and use Tesseract to localize each area of text in the input image
+        # image = cv2.imread(args["image"])
+        img_tess=image.copy()
+        rgb = cv2.cvtColor(img_tess, cv2.COLOR_BGR2RGB)
+        results = pytesseract.image_to_data(rgb, output_type=Output.DICT)
+        
+        # loop over each of the individual text localizations
+        for i in range(0, len(results["text"])):
+            # extract the bounding box coordinates of the text region from
+            # the current result
+            x = results["left"][i]
+            y = results["top"][i]
+            w = results["width"][i]
+            h = results["height"][i]
+            # extract the OCR text itself along with the confidence of the
+            # text localization
+            text = results["text"][i]
+            conf = int(results["conf"][i])
+
+        #filter out weak confidence text localizations
+        if conf > min_conf:
+            # display the confidence and text to our terminal
+            print("Confidence: {}".format(conf))
+            print("Text: {}".format(text))
+            print("")
+            # strip out non-ASCII text so we can draw the text on the image
+            # using OpenCV, then draw a bounding box around the text along
+            # with the text itself
+            text = "".join([c if ord(c) < 128 else "" for c in text]).strip()
+            cv2.rectangle(img_tess, (x, y), (x + w, y + h), (0, 255, 0), 2)
+            cv2.putText(img_tess, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
+                1.2, (0, 0, 255), 3)
 
         if count == 8:
             cv2.imwrite('proj4_DNN_result.jpg',frame)
-        
+            cv2.imwrite('proj4_DNN_tesseract_result.jpg',img_tess)
+            
+
         ###----Save frame to create Output Videos----####
         if make_video == True:
             output_hough.write(img)
             output_contour.write(img_plus_contours)
             output_dnn.write(frame)
+            output_tesseract.write(img_tess)
     
     else: #read video is not success; exit loop
         vid.release()
