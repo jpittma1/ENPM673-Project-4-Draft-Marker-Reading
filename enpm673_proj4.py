@@ -25,6 +25,11 @@ from DNN_functions import *
 #2) DNN_functions.py
 #3) crnn.onnx
 #4) east.pb
+#5) utils folder with augmenter.py, flow_viz.py, frame_utils.py, and utils.py
+#6) corr.py
+#7) extractor.py
+#8) raft.py
+#9) datasets.py
 #********************************************
 
 ####-------EAST and CRNN-------------#########################
@@ -86,14 +91,16 @@ if make_video == True:
     output_hough = cv2.VideoWriter("proj4_houghTransform_output.avi", fourcc, fps_out, (640, 480))
     output_contour = cv2.VideoWriter("proj4_Findcontours_output.avi", fourcc, fps_out, (640, 480))
     output_dnn = cv2.VideoWriter("proj4_DNN_output.avi", fourcc, fps_out, (640, 480))
-    output_OF = cv2.VideoWriter("Vessel Draft Mark-(480p).mp4", fourcc, fps_out, (640, 480))
+    output_OF = cv2.VideoWriter("proj4_OF_output.avi", fourcc, fps_out, (640, 480))
     print("Making video(s)...this will take some time...")
 ###########################################################
 
 ###------Optical Flow function arguments---####
-model=RAFT
+# model=RAFT
+model = 'raft.pth'
 iters=12
 input_video = "Vessel Draft Mark-(480p).mp4"
+input_video = vid
 # OF_video="proj4_opticalFLow_output.avi"
 
 while(vid.isOpened()):
@@ -110,10 +117,11 @@ while(vid.isOpened()):
         
         
         '''Optical Flow'''
-        vid_OF = opticalFlow(model, iters, input_video, output_OF)
+        print("commencing optical Flow using RAFT...")
+        opticalFlow(model, iters, input_video)
         
-        if count == 8:
-            cv2.imwrite('proj4_OpticalFlow.jpg', vid_OF)
+        # if count == 8:
+        #     cv2.imwrite('proj4_OpticalFlow.jpg', vid_OF)
         
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
@@ -238,7 +246,7 @@ while(vid.isOpened()):
             output_hough.write(img)
             output_contour.write(img_plus_contours)
             output_dnn.write(frame)
-            # output_OF.write(vid_OF)
+
     
     else: #read video is not success; exit loop
         vid.release()
@@ -246,10 +254,10 @@ while(vid.isOpened()):
     # print("Count is: ", count)  #657
     
 
-
 vid.release()
 output_hough.release()
 output_contour.release()
 output_dnn.release()
+output_OF.release()
 cv2.destroyAllWindows()
 plt.close('all')

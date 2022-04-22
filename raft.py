@@ -10,27 +10,33 @@ import cv2
 import numpy as np
 import torch
 from collections import OrderedDict
-# from raft import RAFT
-# from raft import *
 
 from utils import *
-# from utils.utils import *
+from utils.utils import *
+from utils.flow_viz import *
+from utils import flow_viz
+# from flow_viz import *
+# from utils.flow_viz import flow_to_image, flow_uv_to_colors
+from utils.frame_utils import *
+from utils.augmentor import *
+
 from update import BasicUpdateBlock, SmallUpdateBlock
 from extractor import BasicEncoder, SmallEncoder
 from corr import CorrBlock, AlternateCorrBlock
-# from utils.utils import bilinear_sampler, coords_grid, upflow8
+from utils.utils import bilinear_sampler, coords_grid, upflow8
 
-try:
-    autocast = torch.cuda.amp.autocast
-except:
-    # dummy autocast for PyTorch < 1.6
-    class autocast:
-        def __init__(self, enabled):
-            pass
-        def __enter__(self):
-            pass
-        def __exit__(self, *args):
-            pass
+# try:
+#     autocast = torch.cuda.amp.autocast
+# except:
+
+# dummy autocast for PyTorch < 1.6
+class autocast:
+    def __init__(self, enabled):
+        pass
+    def __enter__(self):
+        pass
+    def __exit__(self, *args):
+        pass
 
 
 class RAFT(nn.Module):
@@ -47,25 +53,29 @@ class RAFT(nn.Module):
         # else:
         self.hidden_dim = hdim = 128
         self.context_dim = cdim = 128
-        args.corr_levels = 4
-        args.corr_radius = 4
+        self.corr_levels = 4
+        self.corr_radius = 4
+        # args.corr_levels = 4
+        # args.corr_radius = 4
 
-        if 'dropout' not in self.args:
-            self.args.dropout = 0
+        # if 'dropout' not in self.args:
+        #   self.args.dropout = 0
+        self.dropout = 0
 
-        if 'alternate_corr' not in self.args:
-            self.args.alternate_corr = False
+        # if 'alternate_corr' not in self.args:
+            # self.args.alternate_corr = False
+        self.alternate_corr = False
 
         # feature network, context network, and update block
-        if args.small:
-            self.fnet = SmallEncoder(output_dim=128, norm_fn='instance', dropout=args.dropout)        
-            self.cnet = SmallEncoder(output_dim=hdim+cdim, norm_fn='none', dropout=args.dropout)
-            self.update_block = SmallUpdateBlock(self.args, hidden_dim=hdim)
+        # if args.small:
+        #     self.fnet = SmallEncoder(output_dim=128, norm_fn='instance', dropout=args.dropout)        
+        #     self.cnet = SmallEncoder(output_dim=hdim+cdim, norm_fn='none', dropout=args.dropout)
+        #     self.update_block = SmallUpdateBlock(self.args, hidden_dim=hdim)
 
-        else:
-            self.fnet = BasicEncoder(output_dim=256, norm_fn='instance', dropout=args.dropout)        
-            self.cnet = BasicEncoder(output_dim=hdim+cdim, norm_fn='batch', dropout=args.dropout)
-            self.update_block = BasicUpdateBlock(self.args, hidden_dim=hdim)
+        # else:
+        self.fnet = BasicEncoder(output_dim=256, norm_fn='instance', dropout=0)        
+        self.cnet = BasicEncoder(output_dim=hdim+cdim, norm_fn='batch', dropout=0)
+        self.update_block = BasicUpdateBlock(self.args, hidden_dim=hdim)
 
     def freeze_bn(self):
         for m in self.modules():
@@ -106,20 +116,25 @@ class RAFT(nn.Module):
 
         hdim = self.hidden_dim
         cdim = self.context_dim
-
+        mixed_precision=True
+        alternate_corr = False
+        corr_levels = 4
+        corr_radius = 4
+        
         # run the feature network
-        with autocast(enabled=self.args.mixed_precision):
+        # with autocast(enabled=self.args.mixed_precision):
+        with autocast(enabled=mixed_precision):
             fmap1, fmap2 = self.fnet([image1, image2])        
         
         fmap1 = fmap1.float()
         fmap2 = fmap2.float()
-        if self.args.alternate_corr:
-            corr_fn = AlternateCorrBlock(fmap1, fmap2, radius=self.args.corr_radius)
+        if alternate_corr:
+            corr_fn = AlternateCorrBlock(fmap1, fmap2, radius=corr_radius)
         else:
-            corr_fn = CorrBlock(fmap1, fmap2, radius=self.args.corr_radius)
+            corr_fn = CorrBlock(fmap1, fmap2, radius=corr_radius)
 
         # run the context network
-        with autocast(enabled=self.args.mixed_precision):
+        with autocast(enabled=mixed_precision):
             cnet = self.cnet(image1)
             net, inp = torch.split(cnet, [hdim, cdim], dim=1)
             net = torch.tanh(net)
@@ -136,7 +151,7 @@ class RAFT(nn.Module):
             corr = corr_fn(coords1) # index correlation volume
 
             flow = coords1 - coords0
-            with autocast(enabled=self.args.mixed_precision):
+            with autocast(enabled=mixed_precision):
                 net, up_mask, delta_flow = self.update_block(net, inp, corr, flow)
 
             # F(t+1) = F(t) + \Delta(t)
@@ -164,6 +179,11 @@ def frame_preprocess(frame, device):
 
 def vizualize_flow(img, flo, save, counter):
     # permute the channels and change device is necessary
+    
+    fourcc = cv2.VideoWriter_fourcc(*'XVID')
+    fps_out = 30    #match input video
+    
+    
     img = img[0].permute(1, 2, 0).cpu().numpy()
     flo = flo[0].permute(1, 2, 0).cpu().numpy()
 
@@ -173,14 +193,24 @@ def vizualize_flow(img, flo, save, counter):
 
     # concatenate, save and show images
     img_flo = np.concatenate([img, flo], axis=0)
+    
+    height_ = img_flo.shape[0]
+    width_ = img_flo.shape[1]
+    
+    print("size of img_flow is ", height_, width_)
+    output_OF = cv2.VideoWriter("proj4_OF_output.avi", fourcc, fps_out, (640, 480))
+    # output_OF = cv2.VideoWriter("proj4_OF_output.avi", fourcc, fps_out, (640, 960))
+    
     if save:
-        cv2.imwrite(f"demo_frames/frame_{str(counter)}.jpg", img_flo)
-    cv2.imshow("Optical Flow", img_flo / 255.0)
+        if counter = 8: #Don't want to save all images everytime
+            cv2.imwrite(f"OF_frame_{str(counter)}.jpg", img_flo)
+        # cv2.imwrite(f"OF_frames/frame_{str(counter)}.jpg", img_flo)
+        output_OF.write(np.uint8(img_flo))
+    # cv2.imshow("Optical Flow", img_flo / 255.0) ##REALLY SLOW!!!
     k = cv2.waitKey(25) & 0xFF
     if k == 27:
         return False
     return True
-
 
 def get_cpu_model(model):
     new_model = OrderedDict()
@@ -191,17 +221,17 @@ def get_cpu_model(model):
         new_model[new_name] = model[name]
     return new_model
 
-# model, iters, OF_video
-def opticalFlow(mode, iter, video, output):
+
+def opticalFlow(mode, iter, video):
     # get the RAFT model
     model = RAFT(mode)
     # load pretrained weights
-    pretrained_weights = torch.load(mode)
-
+    pretrained_weights = torch.load(mode, map_location=torch.device('cpu'))
+    # torch.load with map_location=torch.device('cpu')
     save = True
     if save:
-        if not os.path.exists("demo_frames"):
-            os.mkdir("demo_frames")
+        if not os.path.exists("OF_frames"):
+            os.mkdir("OF_frames")
 
     # if torch.cuda.is_available():
     #     device = "cuda"
@@ -220,9 +250,9 @@ def opticalFlow(mode, iter, video, output):
     # change model's mode to evaluation
     model.eval()
 
-    video_path = video
+    # video_path = video
     # capture the video and get the first frame
-    cap = cv2.VideoCapture(video_path)
+    cap = video
     ret, frame_1 = cap.read()
 
     # frame preprocessing
@@ -246,8 +276,8 @@ def opticalFlow(mode, iter, video, output):
             frame_1 = frame_2
             counter += 1
 
-            output.write(frame_1)
+            # output.write(frame_1)
             # output_video=append.
-    
-    return output
+    output_OF.release()
+    # return output
 
