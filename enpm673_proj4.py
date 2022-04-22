@@ -12,24 +12,12 @@
 
 import numpy as np
 import cv2
-# import scipy
-# from scipy import fft, ifft
-# from numpy import histogram_bin_edges, linalg as LA
-# import matplotlib.pyplot as plt
-# import sys
-# import math
-# import os
-# from os.path import isfile, join
-# import timeit
-# import argparse
 import torch
-# import models.crnn
-# from models.crnn import CRNN
-from pytesseract import Output
-import pytesseract
+
+# from raft import RAFT
+from raft import *
 from crnn import *
 from DNN_functions import *
-
 
 #********************************************
 # Requires the following in same folder to run:
@@ -38,31 +26,6 @@ from DNN_functions import *
 #3) crnn.onnx
 #4) east.pb
 #********************************************
-
-###TODO: Cut???
-# ############ Add argument parser for command line arguments ############
-# parser = argparse.ArgumentParser(
-#     description="Use this script to run TensorFlow implementation (https://github.com/argman/EAST) of "
-#                 "EAST: An Efficient and Accurate Scene Text Detector (https://arxiv.org/abs/1704.03155v2)"
-#                 "The OCR model can be obtained from converting the pretrained CRNN model to .onnx format from the github repository https://github.com/meijieru/crnn.pytorch"
-#                 "Or you can download trained OCR model directly from https://drive.google.com/drive/folders/1cTbQ3nuZG-EKWak6emD_s8_hHXWz7lAr?usp=sharing")
-# parser.add_argument('--input',
-#                     help='Path to input image or video file. Skip this argument to capture frames from a camera.')
-# parser.add_argument('--model', '-m',default="CRNN", required=False,
-# # parser.add_argument('--model', '-m', default="CRNN(32, 1, 37, 256)",required=True,
-#                     help='Path to a binary .pb file contains trained detector network.')
-# parser.add_argument('--ocr', default="crnn.onnx",
-#                     help="Path to a binary .pb or .onnx file contains trained recognition network", )
-# parser.add_argument('--width', type=int, default=320,
-#                     help='Preprocess input image by resizing to a specific width. It should be multiple by 32.')
-# parser.add_argument('--height', type=int, default=320,
-#                     help='Preprocess input image by resizing to a specific height. It should be multiple by 32.')
-# parser.add_argument('--thr', type=float, default=0.5,
-#                     help='Confidence threshold.')
-# parser.add_argument('--nms', type=float, default=0.4,
-#                     help='Non-maximum suppression threshold.')
-# args = parser.parse_args()
-##############################################################
 
 ####-------EAST and CRNN-------------#########################
 # model = crnn.CRNN(32, 1, 37, 256) #---Uses crnn.py---
@@ -98,9 +61,6 @@ outNames.append("feature_fusion/Conv_7/Sigmoid")
 outNames.append("feature_fusion/concat_3")
 ########################################################
 
-##---For Tesseract---###
-# min_conf=50
-########################
 
 '''Read in the video'''
 #---Input Video Parameters---###
@@ -113,23 +73,6 @@ count = start
 if (vid.isOpened() == False):
     print('Please check the file name again and file location!')
 
-##TODO: Optical Flow??###
-# ####----Setup For Optical Flow-------#########
-# cap = cv2.VideoCapture(0)
-# frame_previous = cap.read()[1]
-# gray_previous = cv2.cvtColor(frame_previous, cv2.COLOR_BGR2GRAY)
-# hsv = np.zeros_like(frame_previous)
-# hsv[:, :, 1] = 255
-# param = {
-#     'pyr_scale': 0.5,
-#     'levels': 3,
-#     'winsize': 15,
-#     'iterations': 3,
-#     'poly_n': 5,
-#     'poly_sigma': 1.1,
-#     'flags': cv2.OPTFLOW_LK_GET_MIN_EIGENVALS
-# }
-# ############################################
 
 ###############----Output Video Parameters-----##############
 make_video=True    #Toggle this to make an output video
@@ -143,9 +86,15 @@ if make_video == True:
     output_hough = cv2.VideoWriter("proj4_houghTransform_output.avi", fourcc, fps_out, (640, 480))
     output_contour = cv2.VideoWriter("proj4_Findcontours_output.avi", fourcc, fps_out, (640, 480))
     output_dnn = cv2.VideoWriter("proj4_DNN_output.avi", fourcc, fps_out, (640, 480))
-    # output_tesseract = cv2.VideoWriter("proj4_tesseract_output.avi", fourcc, fps_out, (640, 480))
+    output_OF = cv2.VideoWriter("Vessel Draft Mark-(480p).mp4", fourcc, fps_out, (640, 480))
     print("Making video(s)...this will take some time...")
 ###########################################################
+
+###------Optical Flow function arguments---####
+model=RAFT
+iters=12
+input_video = "Vessel Draft Mark-(480p).mp4"
+# OF_video="proj4_opticalFLow_output.avi"
 
 while(vid.isOpened()):
     count+=1
@@ -158,6 +107,14 @@ while(vid.isOpened()):
         width_ = image.shape[1]
         rW = width_ / float(inpWidth)   #multiple of 32
         rH = height_ / float(inpHeight)
+        
+        
+        '''Optical Flow'''
+        vid_OF = opticalFlow(model, iters, input_video, output_OF)
+        
+        if count == 8:
+            cv2.imwrite('proj4_OpticalFlow.jpg', vid_OF)
+        
         gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
 
         '''Harris corner detection'''
@@ -215,11 +172,9 @@ while(vid.isOpened()):
             cv2.imwrite('proj4_contours.jpg',img_plus_contours)
         
         
-        '''Hough Transform Detection'''
+        '''Hough Transform Detection??'''
         
-        ##TODO: Optical Flow??###
-        '''Optical Flow???'''
-        # flow = cv2.calcOpticalFlowFarneback(gray_previous, gray, None, **param)
+        
 
         '''Translate numbers using CNN/DNN CRNN Text recognition model'''
         # Create a 4D blob from frame.
@@ -272,54 +227,18 @@ while(vid.isOpened()):
         if count == 8:
             cv2.imwrite('proj4_DNN_result.jpg',frame)
         
-        #####################################################################    
-        # '''Using Tesseract CNN and OCR'''
-        # # load the input image, convert it from BGR to RGB channel ordering,
-        # # and use Tesseract to localize each area of text in the input image
-        # # image = cv2.imread(args["image"])
-        # img_tess=image.copy()
-        # rgb = cv2.cvtColor(img_tess, cv2.COLOR_BGR2RGB)
-        # results = pytesseract.image_to_data(rgb, output_type=Output.DICT)
         
-        # # loop over each of the individual text localizations
-        # for i in range(0, len(results["text"])):
-        #     # extract the bounding box coordinates of the text region from
-        #     # the current result
-        #     x = results["left"][i]
-        #     y = results["top"][i]
-        #     w = results["width"][i]
-        #     h = results["height"][i]
-        #     # extract the OCR text itself along with the confidence of the
-        #     # text localization
-        #     text = results["text"][i]
-        #     conf = int(results["conf"][i])
-
-        # #filter out weak confidence text localizations
-        # if conf > min_conf:
-        #     # display the confidence and text to our terminal
-        #     # print("Confidence: {}".format(conf))
-        #     # print("Text: {}".format(text))
-        #     # print("")
-        #     # strip out non-ASCII text so we can draw the text on the image
-        #     # using OpenCV, then draw a bounding box around the text along
-        #     # with the text itself
-        #     text = "".join([c if ord(c) < 128 else "" for c in text]).strip()
-        #     cv2.rectangle(img_tess, (x, y), (x + w, y + h), (0, 255, 0), 2)
-        #     cv2.putText(img_tess, text, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX,
-        #         1.2, (0, 0, 255), 3)
-        ########################################################################
 
         if count == 8:
             cv2.imwrite('proj4_DNN_result.jpg',frame)
-            # cv2.imwrite('proj4_DNN_tesseract_result.jpg',img_tess)
-            
+
 
         ###----Save frame to create Output Videos----####
         if make_video == True:
             output_hough.write(img)
             output_contour.write(img_plus_contours)
             output_dnn.write(frame)
-            # output_tesseract.write(img_tess)
+            # output_OF.write(vid_OF)
     
     else: #read video is not success; exit loop
         vid.release()
