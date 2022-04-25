@@ -11,10 +11,15 @@ Yash Kulkarni (UID: 117386967); ykulkarn@umd.edu
 
 #********************************************
 # Requires the following in same folder to run:
-1) "Vessel Draft Mark-(480p).mp4"
-2) "DNN_functions.py"
-3) "crnn.onnx"
-4) "east.pb"
+#1) "Vessel Draft Mark-(480p).mp4"
+#2) DNN_functions.py
+#3) crnn.onnx
+#4) east.pb
+#5) utils folder with augmenter.py, flow_viz.py, frame_utils.py, and utils.py
+#6) corr.py
+#7) extractor.py
+#8) raft.py
+#9) datasets.py
 #********************************************
 
 #Function modules used: numpy, cv2, scipy, matplotlib.pyplot, sys, math, timeit, torch, tensorflow, tesseract, pytesseract, imutils
