@@ -197,12 +197,12 @@ def vizualize_flow(img, flo, save, counter):
     height_ = img_flo.shape[0]
     width_ = img_flo.shape[1]
     
-    print("size of img_flow is ", height_, width_)
-    output_OF = cv2.VideoWriter("proj4_OF_output.avi", fourcc, fps_out, (640, 480))
-    # output_OF = cv2.VideoWriter("proj4_OF_output.avi", fourcc, fps_out, (640, 960))
+    # print("size of img_flow is ", height_, width_)
+    # output_OF = cv2.VideoWriter("proj4_OF_output.avi", fourcc, fps_out, (640, 480))
+    output_OF = cv2.VideoWriter("proj4_OF_output.avi", fourcc, fps_out, (640, 960))
     
     if save:
-        if counter = 8: #Don't want to save all images everytime
+        if counter == 8: #Don't want to save all images everytime
             cv2.imwrite(f"OF_frame_{str(counter)}.jpg", img_flo)
         # cv2.imwrite(f"OF_frames/frame_{str(counter)}.jpg", img_flo)
         output_OF.write(np.uint8(img_flo))
