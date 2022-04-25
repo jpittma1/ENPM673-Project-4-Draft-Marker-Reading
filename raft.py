@@ -105,8 +105,9 @@ class RAFT(nn.Module):
         return up_flow.reshape(N, 2, 8*H, 8*W)
 
 
-    def forward(self, image1, image2, iters=12, flow_init=None, upsample=True, test_mode=False):
+    def forward(self, image1, image2, iters=5, flow_init=None, upsample=True, test_mode=False):
         """ Estimate optical flow between pair of frames """
+        #initially 12 iterations; takes long time so knocked down to 5
 
         image1 = 2 * (image1 / 255.0) - 1.0
         image2 = 2 * (image2 / 255.0) - 1.0
@@ -118,7 +119,7 @@ class RAFT(nn.Module):
         cdim = self.context_dim
         mixed_precision=True
         alternate_corr = False
-        corr_levels = 4
+        # corr_levels = 4
         corr_radius = 4
         
         # run the feature network
@@ -194,10 +195,10 @@ def vizualize_flow(img, flo, save, counter):
     # concatenate, save and show images
     img_flo = np.concatenate([img, flo], axis=0)
     
-    height_ = img_flo.shape[0]
-    width_ = img_flo.shape[1]
-    
+    # height_ = img_flo.shape[0]
+    # width_ = img_flo.shape[1]
     # print("size of img_flow is ", height_, width_)
+    
     # output_OF = cv2.VideoWriter("proj4_OF_output.avi", fourcc, fps_out, (640, 480))
     output_OF = cv2.VideoWriter("proj4_OF_output.avi", fourcc, fps_out, (640, 960))
     
@@ -278,6 +279,6 @@ def opticalFlow(mode, iter, video):
 
             # output.write(frame_1)
             # output_video=append.
-    output_OF.release()
+    # output_OF.release()
     # return output
 
