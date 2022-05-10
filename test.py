@@ -11,13 +11,16 @@ import torch
 from PIL import Image
 
 from raft import RAFT
-# from utils import flow_viz
-# from utils.utils import InputPadder
-from core.utils import flow_viz
-from core.utils.utils import InputPadder
+from utils import flow_viz
+from utils.utils import InputPadder
 
-# DEVICE = 'cuda'
-DEVICE = 'cpu'
+DEVICE = 'cuda'
+
+####-------so works on Jerry's computer-------###
+# from core.utils import flow_viz    
+# from core.utils.utils import InputPadder     
+# DEVICE = 'cpu'  
+#################################################
 
 
 def viz(img, flo):
@@ -55,6 +58,7 @@ def main(args):
 
     while True:
         success, current_frame = vid_cap.read()
+        box_img = current_frame.copy()  #for slidedeck
         crop = np.zeros_like(current_frame)
         crop[:,180:350] = 255
         current_frame = cv.bitwise_and(crop,current_frame)
@@ -64,8 +68,6 @@ def main(args):
         temp_img = current_frame.copy()
         cv.imshow("Source",current_frame)
         
-        
-
         current_frame = load_image(current_frame)        
 
         padder = InputPadder(current_frame.shape)
@@ -79,6 +81,7 @@ def main(args):
         heat_map_img = result.astype(np.uint8)
         
         orginal_gray = cv.cvtColor(temp_img, cv.COLOR_BGR2GRAY)
+        original_grey = cv.cvtColor(box_img, cv.COLOR_BGR2GRAY) #for slidedeck
         gray_img = cv.cvtColor(heat_map_img, cv.COLOR_BGR2GRAY)
         ret,thresh_img = cv.threshold(gray_img , 230 ,255,cv.THRESH_BINARY)
 
@@ -115,6 +118,7 @@ def main(args):
                 print(box)
                 box = np.int0(box)
                 cv.drawContours(temp_img,[box],0,(0,0,255),2)
+                cv.drawContours(box_img,[box],0,(0,0,255),2)    #for slidedeck
                 warp_image(box,masked_thresh)
                 cv.waitKey(0)
 
@@ -130,22 +134,25 @@ def main(args):
                 print(box)
                 box = np.int0(box)
                 cv.drawContours(temp_img,[box],0,(0,0,255),2)
+                cv.drawContours(box_img,[box],0,(0,0,255),2)    #for slidedeck
                 warp_image(box,masked_thresh)
                 cv.waitKey(0)
 
 
+        # cv.imshow("grey_img", original_grey)   #for slidedeck
         # cv.imshow("Canny",canny_img)
-        # cv.imshow("Masked", masked_img)
-        cv.namedWindow("Masked_thresh",cv.WINDOW_NORMAL)
-        cv.imshow("Masked_thresh",masked_thresh)
+        cv.imshow("Masked", masked_img)
+        # cv.namedWindow("Masked_thresh",cv.WINDOW_NORMAL)
+        # cv.imshow("Masked_thresh",masked_thresh)
+        # cv.imshow("masked_thresh_gradient_canny",masked_thresh_gradient_canny)  #for slidedeck
         # cv.imshow("Warped",warped_img)
         # cv.imshow("Thresh", thresh_img)
-        # cv.imshow("Heat Map", heat_map_img)
-        # cv.imshow("Output", temp_img)q
+        cv.imshow("Heat Map", heat_map_img)
+        cv.imshow("Original w/Box", box_img)    #for slidedeck
         # cv.imshow("masked_thresh_closing",masked_thresh_closing)
         # cv.imshow("masked_thresh_closing_canny",masked_thresh_closing_canny)
-        cv.imshow("blank_testing",blank_testing)
-        cv.imshow("temp_img",temp_img)
+        # cv.imshow("blank_testing",blank_testing)
+        # cv.imshow("temp_img",temp_img)
 
 
         if cv.waitKey(0) == ord('q'):
@@ -153,7 +160,6 @@ def main(args):
 
     vid_cap.release()
     cv.destroyAllWindows()
-
 
 
     # with torch.no_grad():
