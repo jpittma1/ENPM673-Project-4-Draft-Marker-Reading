@@ -1,6 +1,8 @@
 # Project 4 (Water Level Detection for Ship Hull)
 Conducted for ENPM673 Spring 2022
 
+Git Repo: https://github.com/jpittma1/ENPM673-Project-4-Draft-Marker-Reading.git
+
 Sri Sai Charan V 
 Vaishanth Ramaraj
 Pranav Limbekar
