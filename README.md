@@ -25,14 +25,18 @@ conda activate raft
 conda install pytorch=1.6.0 torchvision=0.7.0 cudatoolkit=10.1 matplotlib tensorboard scipy opencv -c pytorch
 ```
 
-## Run our Code on the Vessel Movie
-if have GPU, run as is:
+## To Run our Code on the Vessel Movie to detect and mark water levels
+If have GPU, run code as is:
+'''
 python test.py --model=models/raft-things.pth --path=demo-frames
-
+'''
 if don't have a GPU:
 1) Comment out line 20
 2) Uncomment line 23
-
+3) Run Code:
+'''
+python test.py --model=models/raft-things.pth --path=demo-frames
+'''
 ## Hardware Implementation using Raspberry Pi
 
 
