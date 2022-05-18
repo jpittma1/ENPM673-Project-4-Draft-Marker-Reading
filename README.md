@@ -1,4 +1,4 @@
-Project 4 (Water Level Detection for Ship Hull)
+# Project 4 (Water Level Detection for Ship Hull)
 Conducted for ENPM673 Spring 2022
 
 Sri Sai Charan V 
@@ -8,8 +8,8 @@ Yash Kulkarni
 Jerry Pittman, Jr.
 
 -------------
-# RAFT
-This repository contains the source code for RAFT:
+## RAFT
+This repository contains the source code and paper for RAFT:
 
 [RAFT: Recurrent All Pairs Field Transforms for Optical Flow](https://arxiv.org/pdf/2003.12039.pdf)<br/>
 ECCV 2020 <br/>
