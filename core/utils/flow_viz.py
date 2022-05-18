@@ -14,6 +14,7 @@
 #
 # Author: Tom Runia
 # Date Created: 2018-08-03
+#!/usr/bin/python3 
 
 import numpy as np
 import matplotlib.pyplot as plt
@@ -43,28 +44,28 @@ def make_colorwheel():
     col = 0
 
     # RY
-    colorwheel[0:RY, 0] = 255
-    colorwheel[0:RY, 1] = np.floor(255*np.arange(0,RY)/RY)
+    colorwheel[0:RY, 0] = 0
+    colorwheel[0:RY, 1] = 0
     col = col+RY
     # YG
-    colorwheel[col:col+YG, 0] = 255 - np.floor(255*np.arange(0,YG)/YG)
-    colorwheel[col:col+YG, 1] = 255
+    colorwheel[col:col+YG, 0] = 0
+    colorwheel[col:col+YG, 1] = 0
     col = col+YG
     # GC
-    colorwheel[col:col+GC, 1] = 255
-    colorwheel[col:col+GC, 2] = np.floor(255*np.arange(0,GC)/GC)
+    colorwheel[col:col+GC, 1] = 0
+    colorwheel[col:col+GC, 2] = 0
     col = col+GC
     # CB
-    colorwheel[col:col+CB, 1] = 255 - np.floor(255*np.arange(CB)/CB)
-    colorwheel[col:col+CB, 2] = 255
+    colorwheel[col:col+CB, 1] = 0
+    colorwheel[col:col+CB, 2] = 0
     col = col+CB
     # BM
-    colorwheel[col:col+BM, 2] = 255
-    colorwheel[col:col+BM, 0] = np.floor(255*np.arange(0,BM)/BM)
+    colorwheel[col:col+BM, 2] = 0
+    colorwheel[col:col+BM, 0] = 0
     col = col+BM
     # MR
-    colorwheel[col:col+MR, 2] = 255 - np.floor(255*np.arange(MR)/MR)
-    colorwheel[col:col+MR, 0] = 255
+    colorwheel[col:col+MR, 2] = 0
+    colorwheel[col:col+MR, 0] = 0
     return colorwheel
 
 
