@@ -42,8 +42,9 @@ python project4.py --model=models/raft-things.pth --path=demo-frames
 Final Output video GDrive: https://drive.google.com/drive/folders/1S9JEo39-vkEtpP1TtJBmfUNx4ZZ1hCPv?usp=sharing
 ## Hardware Implementation using Raspberry Pi
 
+
 ```Shell
-python project4_train.py 
+python3 waterdetection.py
 ```
 
 Sadly, for the the hardware implemention that due to slow processing onboard the robot with raspberry pi the number detected in the video doesn’t change. Level detection with water especially with flow takes a great deal amount of processing.
