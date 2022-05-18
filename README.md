@@ -4,7 +4,7 @@ Conducted for ENPM673 Spring 2022
 
 Git Repo: https://github.com/jpittma1/ENPM673-Project-4-Draft-Marker-Reading.git
 
-Sri Sai Charan V 
+Sri Sai Charan V
 Vaishanth Ramaraj
 Pranav Limbekar
 Yash Kulkarni
@@ -45,6 +45,7 @@ python cnn_training.py
 ```
 
 Final Output video GDrive: https://drive.google.com/drive/folders/1S9JEo39-vkEtpP1TtJBmfUNx4ZZ1hCPv?usp=sharing
+
 ## Hardware Implementation using Raspberry Pi
 
 ```Shell
