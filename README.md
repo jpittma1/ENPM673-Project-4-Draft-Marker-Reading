@@ -1,6 +1,7 @@
 # Project 4 (Water Level Detection for Ship Hull)
 Conducted for ENPM673 Spring 2022
 
+
 Git Repo: https://github.com/jpittma1/ENPM673-Project-4-Draft-Marker-Reading.git
 
 Sri Sai Charan V 
@@ -16,8 +17,6 @@ This repository contains the source code and paper for RAFT:
 [RAFT: Recurrent All Pairs Field Transforms for Optical Flow](https://arxiv.org/pdf/2003.12039.pdf)<br/>
 ECCV 2020 <br/>
 Zachary Teed and Jia Deng<br/>
-
-<img src="RAFT.png">
 
 ## Requirements
 The code has been tested with PyTorch 1.6 and Cuda 10.1 as well as with CPU computer.
