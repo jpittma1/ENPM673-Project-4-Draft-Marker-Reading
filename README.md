@@ -29,19 +29,20 @@ conda install pytorch=1.6.0 torchvision=0.7.0 cudatoolkit=10.1 matplotlib tensor
 ## To Run our Code on the Vessel Movie to detect and mark water levels
 If have GPU, run code as is:
 ```Shell
-python project4.py --model=models/raft-things.pth --path=demo-frames
+python main.py
 ```
 if don't have a GPU:
 1) Comment out line 20
 2) Uncomment line 23
 3) Run Code:
 ```Shell
-python project4.py --model=models/raft-things.pth --path=demo-frames
+python main.py
 ```
 
 CNN Training:
 ```Shell
-cnn_training,py
+python cnn_training.py
+```
 
 Final Output video GDrive: https://drive.google.com/drive/folders/1S9JEo39-vkEtpP1TtJBmfUNx4ZZ1hCPv?usp=sharing
 ## Hardware Implementation using Raspberry Pi
